@@ -1,0 +1,41 @@
+-- Write queries to support the following questions.
+-- 1. How many taxi companies are in this data set?
+-- Answer: 174 
+select count(distinct company)
+from `bigquery-public-data.chicago_taxi_trips.taxi_trips`;
+
+-- 2. What are the top 3 biggest taxi companies as measured by trip total and what are those totals?
+-- Answer: Taxi Affiliation Services, Flash Cab, Dispatch Taxi Affiliation
+with tmp as (
+  select company, count(distinct unique_key) as trip_total
+  from `bigquery-public-data.chicago_taxi_trips.taxi_trips`
+  where company is not null
+  group by 1
+)
+select company, FORMAT("%'d", trip_total), rank() over (order by trip_total desc) as rank
+from tmp
+qualify rank <=3
+order by rank asc;
+
+-- 3. How many companies had revenues of 3 Bill USD or more in 2015?
+-- Answer: No company
+with tmp as (select company, sum(trip_total) as revenue
+from `bigquery-public-data.chicago_taxi_trips.taxi_trips`
+where extract(year from trip_start_timestamp) = 2015 and extract(year from trip_end_timestamp) = 2015 
+group by 1
+having sum(trip_total) >= 3000000000 --revenue >= 3 Billion USD
+)
+select count(1) from tmp;
+
+-- 4. Does the taxi table contain any duplicates? 
+-- Answer: Yes
+with tmp as (
+SELECT *, 
+-- make sure those 5 columns has different value with another records
+COUNT(1) OVER(PARTITION BY taxi_id, trip_start_timestamp, trip_end_timestamp, cast(trip_total as string), payment_type) duplicate 
+  FROM `bigquery-public-data.chicago_taxi_trips.taxi_trips`
+)
+select * from tmp 
+where duplicate > 1
+order by taxi_id, trip_start_timestamp, trip_end_timestamp
+limit 100;
