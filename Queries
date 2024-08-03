@@ -1,6 +1,6 @@
 -- Write queries to support the following questions.
 -- 1. How many taxi companies are in this data set?
--- Answer: 174 
+-- Answer: 183 
 select count(distinct company)
 from `bigquery-public-data.chicago_taxi_trips.taxi_trips`;
 
